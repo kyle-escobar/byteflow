@@ -22,13 +22,11 @@ internal class RenameVisitor : BFVisitor {
     }
 
     override fun visitStart() {
-        group.loader.memoryMode = true
         group.commit()
-
         group.classes.forEach { cls ->
-            val outputStream = group.loader.getMemoryOutputStream(cls.info) ?: error("Failed to find bytes for class: ${cls.info.name()}.")
+            val bytes = group.loader.getClassBytes(cls.info) ?: throw IllegalStateException("Failed to get class: ${cls.name} bytes.")
             val node = ClassNode()
-            val reader = ClassReader(outputStream.toByteArray())
+            val reader = ClassReader(bytes)
             reader.accept(node, ClassReader.SKIP_FRAMES)
             classes.add(node)
         }
@@ -45,7 +43,7 @@ internal class RenameVisitor : BFVisitor {
 
         group.clear()
         if(inputFile != null) group.loader.inputFile = inputFile
-        if(outputFile != null) group.loader.setOutputJarFile(outputFile)
+        if(outputFile != null) group.loader.outputFile = outputFile
 
         classes.forEach { cls ->
             val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)

@@ -3,7 +3,7 @@ package dev.kyleescobar.byteflow
 import dev.kyleescobar.byteflow.context.PersistentBloatContext
 import dev.kyleescobar.byteflow.editor.ClassHierarchy
 import dev.kyleescobar.byteflow.file.ClassFile
-import dev.kyleescobar.byteflow.file.JarClassFileLoader
+import dev.kyleescobar.byteflow.file.MemoryClassFileLoader
 import dev.kyleescobar.byteflow.reflect.ClassInfo
 import dev.kyleescobar.byteflow.visitor.BFVisitor
 import java.io.DataInputStream
@@ -15,7 +15,7 @@ import java.util.jar.JarOutputStream
 
 class ClassGroup {
 
-    var loader = JarClassFileLoader()
+    var loader = MemoryClassFileLoader(this)
         private set
 
     var context = PersistentBloatContext(loader)
@@ -37,7 +37,6 @@ class ClassGroup {
 
     fun addClass(name: String, data: ByteArray): Boolean {
         val cls = ClassFile(File("$name.class"), loader, DataInputStream(data.inputStream()))
-        loader.addClassInfo(cls)
         return addClass(cls)
     }
 
@@ -49,29 +48,25 @@ class ClassGroup {
 
     fun getClass(name: String): BFClass? = classMap[name]
 
-    fun addJarFile(file: File) {
+    fun addFromJarFile(file: File) {
         if(!file.exists()) throw FileNotFoundException("Jar file: ${file.path} does not exist.")
-        val classes = loader.loadClassesFromJarFile(file).filterNotNull()
-        classes.forEach { cls ->
-            if(!addClass(cls)) throw IllegalStateException("Failed to add class: ${cls.name()} to class group from jar file.")
+        loader.loadClassesFromJarFile(file).filterNotNull().forEach { info ->
+            if(!addClass(info)) throw IllegalStateException("Failed to add class: ${info.name()} from jar file.")
         }
     }
 
     fun saveToJarFile(file: File) {
         if(file.exists()) file.deleteRecursively()
-        loader.memoryMode = true
-        loader.setOutputJarFile(file)
         this.commit()
 
         val jos = JarOutputStream(FileOutputStream(file))
         classes.forEach { cls ->
-            val bytes = loader.getMemoryOutputStream(cls.info)?.toByteArray() ?: error("Failed to get bytes for class: ${cls.name}.")
+            val bytes = loader.getClassBytes(cls.info) ?: throw IllegalStateException("Failed to get class: ${cls.name} bytes.")
             jos.putNextEntry(JarEntry(cls.name + ".class"))
             jos.write(bytes)
             jos.closeEntry()
         }
         jos.close()
-        loader.memoryMode = false
     }
 
     fun accept(visitor: BFVisitor) {
@@ -85,7 +80,7 @@ class ClassGroup {
 
     fun clear() {
         classMap.clear()
-        loader = JarClassFileLoader()
+        loader = MemoryClassFileLoader(this)
         context = PersistentBloatContext(loader)
     }
 
