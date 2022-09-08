@@ -6,6 +6,9 @@ import dev.kyleescobar.byteflow.file.ClassFile
 import dev.kyleescobar.byteflow.file.MemoryClassFileLoader
 import dev.kyleescobar.byteflow.reflect.ClassInfo
 import dev.kyleescobar.byteflow.visitor.BFVisitor
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.tree.ClassNode
 import java.io.DataInputStream
 import java.io.File
 import java.io.FileNotFoundException
@@ -50,6 +53,7 @@ class ClassGroup {
 
     fun addFromJarFile(file: File) {
         if(!file.exists()) throw FileNotFoundException("Jar file: ${file.path} does not exist.")
+        loader.resetStreams()
         loader.loadClassesFromJarFile(file).filterNotNull().forEach { info ->
             if(!addClass(info)) throw IllegalStateException("Failed to add class: ${info.name()} from jar file.")
         }
@@ -62,8 +66,16 @@ class ClassGroup {
         val jos = JarOutputStream(FileOutputStream(file))
         classes.forEach { cls ->
             val bytes = loader.getClassBytes(cls.info) ?: throw IllegalStateException("Failed to get class: ${cls.name} bytes.")
+
+            val node = ClassNode()
+            val reader = ClassReader(bytes)
+            reader.accept(node, ClassReader.SKIP_FRAMES)
+
+            val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
+            node.accept(writer)
+
             jos.putNextEntry(JarEntry(cls.name + ".class"))
-            jos.write(bytes)
+            jos.write(writer.toByteArray())
             jos.closeEntry()
         }
         jos.close()
@@ -85,6 +97,7 @@ class ClassGroup {
     }
 
     fun commit() {
+        loader.resetStreams()
         classMap.values.forEach { cls ->
             cls.methods.forEach { method ->
                 method.releaseCfg()

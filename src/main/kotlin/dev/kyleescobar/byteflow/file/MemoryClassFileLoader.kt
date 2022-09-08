@@ -27,11 +27,11 @@ class MemoryClassFileLoader(private val group: ClassGroup) : ClassFileLoader() {
         return outputStreamFor(info.name() + ".class")
     }
 
-    override fun loadClass(name: String): ClassInfo {
-        return group.getClass(name.replace(".class", ""))?.info ?: super.loadClass(name)
-    }
-
     fun getClassBytes(name: String): ByteArray? = streamClassMap[name]?.toByteArray()
 
     fun getClassBytes(info: ClassInfo): ByteArray? = getClassBytes(info.name() + ".class")
+
+    fun resetStreams() {
+        streamClassMap.clear()
+    }
 }

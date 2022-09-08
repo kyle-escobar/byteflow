@@ -24,8 +24,7 @@ class BFMethod(val owner: BFClass, val info: MethodInfo, val editor: MethodEdito
 
     fun releaseCfg() {
         if(cfg != null) {
-            var codegen = CodeGenerator(editor)
-            codegen = CodeGenerator(editor)
+            val codegen = CodeGenerator(editor)
 
             codegen.replacePhis(cfg)
             codegen.simplifyControlFlow(cfg)
