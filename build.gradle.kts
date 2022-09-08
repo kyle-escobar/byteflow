@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.kyleescobar.byteflow"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenLocal()
@@ -37,25 +37,21 @@ configure<SourceSetContainer> {
     }
 }
 
+java {
+    withSourcesJar()
+}
+
 publishing {
+    repositories {
+        mavenLocal()
+    }
+
     publications {
         create<MavenPublication>("maven") {
             groupId = project.group.toString()
             artifactId = project.name
             version = project.version.toString()
             from(components["java"])
-
-            pom {
-                name.set("ByteFlow")
-                description.set("A Java ByteCode modification and analysis tree library.")
-                url.set("https://github.com/kyle-escobar/byteflow")
-                developers {
-                    developer {
-                        id.set("kyle-escobar")
-                        name.set("Kyle Escobar")
-                    }
-                }
-            }
         }
     }
 }
