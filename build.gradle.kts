@@ -37,11 +37,6 @@ configure<SourceSetContainer> {
     }
 }
 
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -58,7 +53,6 @@ publishing {
                     developer {
                         id.set("kyle-escobar")
                         name.set("Kyle Escobar")
-                        email.set("")
                     }
                 }
             }
